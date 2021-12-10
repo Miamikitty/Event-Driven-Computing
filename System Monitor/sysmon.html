@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        h4 {
+            color: #666;
+            background-color: #cad9ea;
+            width: 100px;
+            height: 16px;
+            padding: 15px;
+            text-decoration: underline;
+            text-transform: uppercase;
+            border: #666;
+        }
+
+        main {
+            font-family: "Andale Mono", monospace;
+            padding: 32px;
+        }
+        
+        table, th, td {
+            padding: 10px;
+            border: 1px solid #cad9ea;
+            color: #666;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0px;
+        }
+
+        table {
+            max-width: 100vh;
+            margin-bottom: 32px;
+        }
+
+        table td {
+            width: 100px;
+            white-space: nowrap;
+        }
+
+        table thead th
+        {
+            background-color: #CCE8EB;
+            width: auto;
+        }
+        table tr:nth-child(odd)
+        {
+            background: #fff;
+        }
+        table tr:nth-child(even)
+        {
+            background: #F5FAFA;
+        }
+
+        .summary {
+            cursor: pointer;
+            user-select: none;
+            line-height: 1.6;
+        }
+
+        .summary::after {
+            content: "▼";
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        .summary.closed::after {
+            content: "▶";
+        }
+    </style>
+</head>
+<body>
+    <header></header>
+    <main>
+        <h4 id="load-title" class="summary closed">load</h4>
+        <div id="load-container" style="display: none;">
+        </div>
+        <h4 id="network-title" class="summary closed">network</h4>
+        <div id="network-container" style="display: none;">
+        </div>
+        <h4 id="disk-title" class="summary closed">disk</h4>
+        <div id="disk-container" style="display: none;">
+        </div>
+        <h4 id="procs-title" class="summary closed">procs</h4>
+        <div id="procs-container" style="display: none;">
+        </div>
+    </main>
+    <footer></footer>
+
+    <script src = "https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js">
+    </script>
+
+    <script src = "https://unpkg.com/rxjs/bundles/rxjs.umd.min.js">
+    </script>
+    
+    <script>
+
+        const loadContainer = document.getElementById('load-container');
+        const networkContainer = document.getElementById('network-container');
+        const diskContainer = document.getElementById('disk-container');
+        const procsContainer = document.getElementById('procs-container');
+
+        const loadTitle = document.getElementById('load-title');
+        const networkTitle = document.getElementById('network-title');
+        const diskTitle = document.getElementById('disk-title');
+        const procsTitle = document.getElementById('procs-title');
+
+        loadTitle.addEventListener('click', () => {
+            loadContainer.style.display = loadContainer.style.display == 'none' ? 'block' : 'none';
+            loadTitle.classList.toggle('closed');
+        });
+
+        networkTitle.addEventListener('click', () => {
+            networkContainer.style.display = networkContainer.style.display == 'none' ? 'block' : 'none';
+            networkTitle.classList.toggle('closed');
+        });
+
+        diskTitle.addEventListener('click', () => {
+            diskContainer.style.display = diskContainer.style.display == 'none' ? 'block' : 'none';
+            diskTitle.classList.toggle('closed');
+        });
+
+        procsTitle.addEventListener('click', () => {
+            procsContainer.style.display = procsContainer.style.display == 'none' ? 'block' : 'none';
+            procsTitle.classList.toggle('closed');
+        });
+
+        function valueConvect(value) 
+        {
+            if (typeof value === 'number') 
+            {
+                return Math.round(value * 100) / 100;
+            }
+            return value
+        }
+
+        // function of transferring an object to a table string in HTML
+        function objectToTableHTML(obj, ParentName = "") {
+            let html = '';
+
+            if (obj instanceof Array) 
+            {
+                for (let i = 0; i < obj.length; i++) 
+                {
+                    const value = obj[i];
+                    const DisplayKey = ParentName + "[" + i + "]";
+
+                    if (typeof value === 'object') 
+                    {
+                        html += objectToTableHTML(value, DisplayKey);
+                    } 
+                    else 
+                    {
+                        html += `<tr><td>${DisplayKey}</td><td>${valueConvect(value)}</td></tr>`;
+                    }
+                }
+            } 
+            else 
+            {
+                const keys = Object.keys(obj);
+                for (const key of keys) 
+                {
+                    const value = obj[key];
+                    const DisplayKey = !!ParentName ? ParentName + "." + key : key;
+
+                    if (typeof value === 'object') 
+                    {
+                        html += objectToTableHTML(value, DisplayKey);
+                    } 
+                    else 
+                    {
+                        html += `<tr><td>${DisplayKey}</td><td>${valueConvect(value)}</td></tr>`;
+                    }
+                }
+            }
+            return html;
+        }
+
+        //function of transferring object array into HTML table string with columns for properties
+        function objectArrayToColumnTableHTML(array) 
+        {
+            let html = '';
+
+            //get the titles of columns
+            const columnTitles = [];
+
+            for (const object of array) 
+            {
+                for (const key in object) 
+                {
+                    if (object.hasOwnProperty(key)) 
+                    {
+                        if (columnTitles.indexOf(key) == -1) 
+                        {
+                            columnTitles.push(key);
+                        }
+                    }
+                }
+            }
+
+            html += '<thead><tr>';
+            html += columnTitles.map((title) => '<th>' + title + '</th>').join('');
+            html += '</tr></thead>';
+
+            for (const object of array) 
+            {
+                html += '<tr>';
+
+                html += columnTitles.map(key => {
+                    return `<td>${valueConvect(object[key])}</td>`
+                }).join('')
+
+                html += '</tr>';
+            }
+            return html;
+        }
+
+        const { Subject } = rxjs;
+        const { map, filter } = rxjs.operators;
+
+        // create a subject for root data
+        const RootDataSubject = new Subject();
+        
+
+        const socket = io('http://edcsystem.hopto.org/');
+        socket.on('data', (data) => {
+            // access the data from the webpage
+            console.log(data);
+            // put the data into the subject of RXjs
+            RootDataSubject.next(data);
+        });
+
+        // load
+        const LoadDataObservable = RootDataSubject.pipe(
+            // filter the data with "load"
+            filter(data => "load" in data),
+            map(data => data.load)
+        )
+        LoadDataObservable.subscribe((data) => {
+            // transfer data into HTML table string
+            const listHtml = '<table>' + objectArrayToColumnTableHTML(data.cpus) + '</table>'
+            delete data.cpus;
+            loadContainer.innerHTML = '<table>' + objectToTableHTML(data) + '</table>' + listHtml;
+        });
+
+        //network
+        const NetworkDataObservable = RootDataSubject.pipe(
+             // filter the data with "network"
+            filter(data => "network" in data),
+            map(data => data.network)
+        )
+        NetworkDataObservable.subscribe((data) => {
+            // transfer data into HTML table string
+            networkContainer.innerHTML = '<table>' + objectArrayToColumnTableHTML(data) + '</table>';
+        });
+
+        //disk
+        const DiskDataObservable = RootDataSubject.pipe(
+            // filter the data with "disk"
+            filter(data => "disk" in data),
+            map(data => data.disk)
+        )
+        DiskDataObservable.subscribe((data) => {
+            // transfer data into HTML table string
+            diskContainer.innerHTML = '<table>' + objectToTableHTML(data) + '</table>';
+        });
+
+        //procs
+        const ProcsDataObservable = RootDataSubject.pipe(
+            // filter the data with "procs"
+            filter(data => "procs" in data),
+            map(data => data.procs)
+        )
+        ProcsDataObservable.subscribe((data) => {
+            // transfer data into HTML table string
+            data.list.forEach((data) => {
+                delete data.command;
+                delete data.params;
+                delete data.tty;
+                delete data.user;
+                delete data.path;
+            });
+            const listHtml = '<table>' + objectArrayToColumnTableHTML(data.list) + '</table>'
+            delete data.list;
+            procsContainer.innerHTML = '<table>' + objectToTableHTML(data) + '</table>' + listHtml;
+        });
+
+    </script>
+</body>
+</html>
