@@ -195,7 +195,7 @@ function state56()
 
 
 //my regext: c*ba+a|b+c
-
+//Function myCheckMatch is another way created by me regardless of the requirements of the course. I think it is much more efficient than the teacher's solution.
 function myCheckMatch(str) 
 {
     index = 0;
