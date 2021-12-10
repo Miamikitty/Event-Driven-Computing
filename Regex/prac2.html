@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <meta charset="UTF-8">
+        <meta name="Author" content="Maggie Li, University of Adelaide">
+        <meta name="description" content="EDC Prac 2. DO NOT MODIFY THIS FILE.">
+
+        <title>REGEX</title>
+
+        <style>
+
+            body {
+                font-family: sans-serif;
+                font-size: 1.5rem;
+            }
+
+            .container {
+                margin: 1em auto;
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: center;
+                align-content: center;
+                max-width: 400px;
+            }
+
+            .container input {
+                font-size: 1.5rem;
+                flex-grow: 1;
+                box-sizing: border-box;
+                width: 100%;
+                padding: 0.5em;
+                border: 1px solid grey;
+                border-radius: 0.2em;
+            }
+
+
+        </style>
+
+    </head>
+    <body>
+
+        <div class="container">
+
+            <h3>REGEX Match: c*ba+a|b+c</h3>
+
+            <input type="text" oninput="showMatch(this.value)">
+
+        </div>
+
+        <script>
+
+            function showMatch(str){
+
+                //console.log(str);
+
+                if(myCheckMatch(str)){
+                    document.querySelector(".container input").style.backgroundColor = "#88FF88";
+                } else {
+                    document.querySelector(".container input").style.backgroundColor = "#FF8888";
+                }
+                
+            }
+
+        </script>
+
+        <script src="regex.js"></script>
+
+    </body>
+</html>
+        
